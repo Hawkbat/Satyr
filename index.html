@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Satyr Editor</title>
+	<link rel="stylesheet" href="satyr.css">
+	<script src="GameBoyCore.js"></script>
+</head>
+
+<body>
+	<header>
+		<li id="menu-file">File</li>
+		<li id="menu-edit">Edit</li>
+		<li id="menu-view">View</li>
+		<li id="menu-help">Help</li>
+	</header>
+	<main>
+		<section>
+			<section>
+				<h3>Project Options</h3>
+				<fieldset>
+					<label>
+						<span>Name</span>
+						<input type="text" id="project-name" size="8">
+					</label>
+					<label>
+						<span>Mode</span>
+						<select id="project-mode">
+							<option value="0">Gameboy Color</option>
+						</select>
+					</label>
+				</fieldset>
+			</section>
+			<h3>Wave List</h3>
+			<aside><button id="wav-insert">+</button><button id="wav-remove">-</button></aside>
+			<article id="wav-list"></article>
+			<h3>Wave</h3>
+			<figure>
+				<div class="canvas-wrap">
+					<canvas id="wav-canvas" width="32" height="16"></canvas>
+					<div id="wav-grid" class="canvas-grid"></div>
+				</div>
+				<div id="wav-tooltip" class="tooltip"></div>
+			</figure>
+			<h3>Wave Options</h3>
+			<fieldset>
+				<label>
+					<span>Name</span>
+					<input type="text" id="wav-name" size="8">
+				</label>
+				<label>
+					<span>Export</span>
+					<input type="checkbox" id="wav-flags-export">
+				</label>
+				<label>
+					<span>Preset</span>
+					<select id="wav-preset">
+						<option value=""></option>
+						<option value="SINE">Sine</option>
+						<option value="SQUARE">Square</option>
+						<option value="SAWTOOTH">Sawtooth</option>
+						<option value="TRIANGLE">Triangle</option>
+					</select>
+				</label>
+			</fieldset>
+		</section>
+		<section>
+			<h3>Sequence List</h3>
+			<aside><button id="seq-insert">+</button><button id="seq-remove">-</button></aside>
+			<article id="seq-list"></article>
+			<h3>Sequence Options</h3>
+			<fieldset>
+				<label>
+					<span>Name</span>
+					<input type="text" id="seq-name" size="8">
+				</label>
+				<label>
+					<span>Export</span>
+					<input type="checkbox" id="seq-flags-export">
+				</label>
+				<label>
+					<span>Length</span>
+					<input type="number" id="seq-length" min="1" max="256">
+				</label>
+			</fieldset>
+			<h3>Pattern List</h3>
+			<aside><button id="pat-insert">+</button><button id="pat-remove">-</button></aside>
+			<article id="pat-list"></article>
+			<h3>Pattern Options</h3>
+			<fieldset>
+				<label>
+					<span>Name</span>
+					<input type="text" id="pat-name" size="8">
+				</label>
+				<label>
+					<span>Export</span>
+					<input type="checkbox" id="pat-flags-export">
+				</label>
+				<label>
+					<span>Length</span>
+					<input type="number" id="pat-length" min="1" max="256">
+				</label>
+			</fieldset>
+			<canvas hidden id="emu-canvas" width="160" height="144"></canvas>
+		</section>
+		<section>
+			<h3>Sequence</h3>
+			<aside><button id="plr-play">►</button><button id="plr-pause">❚❚</button><button id="plr-stop">◼</button></aside>
+			<div id="seq-grid" class="grid"></div>
+		</section>
+		<section class="stretch">
+			<h3>Pattern</h3>
+			<div id="pat-grid" class="grid"></div>
+		</section>
+		<section id="section-help">
+			<h3>Help</h3>
+			<iframe src="readme.txt"></iframe>
+		</section>
+	</main>
+	<div id="piano"></div>
+	<footer>
+		<i id="tooltip">&nbsp;</i>
+	</footer>
+	<script src="satyr.js"></script>
+</body>
+
+</html>
