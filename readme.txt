@@ -25,7 +25,7 @@ Satyr is a tracker application and runtime engine for writing sound effects and 
 
 Project: a single binary file containing all of the uncompressed source material and design-time metadata.
 
-Wave: a waveform defined by 32 4-bit samples, used for the Gameboy's custom wavetable channel. You can add up to 256 waves per project, and assign them to the waveform channel using the W effect.
+Wave: a waveform defined by 32 4-bit samples, used for the Gameboy's custom wavetable channel. You can add up to 128 waves per project, and assign them to the waveform channel using the W effect.
 
 Note: a 7-bit MIDI note number in the range 36-119 which is subsequently converted to the correct frequency for Gameboy playback.
 
@@ -35,7 +35,7 @@ Channel: one of the four hardware channels of the Gameboy, or the 'system' chann
 
 Row: one 'line' within each pattern, corresponding to a fixed time within the pattern. You can add up to 256 rows per pattern.
 
-Pattern: an array of rows combined to form one continuous section of a sequence. Each channel of the pattern can be played individually if the frame numbers differ. You can add up to 256 patterns per sequence.
+Pattern: an array of rows combined to form one continuous section of a sequence. Each channel of the pattern can be played individually if the frame numbers differ. You can add up to 128 patterns per sequence.
 
 Frame: one 'line' within the current sequence which specifies which pattern to play for each channel. If the patterns are different lengths, the shorter ones will loop until the longest pattern finishes. You can add up to 256 frames per sequence.
 
@@ -46,6 +46,10 @@ Sequence: a single song or sound effect, comprised of patterns and frames. You c
 
 Effect            |Key|SYS|SQ1|SQ2|WAV|NOI|Parameters
 ------------------+---+---+---+---+---+---+----------------------
+Note              |N/A|   | Y | Y | Y |   |Note (A-G), sharp (# or -), octave (3-9)
+Note (Noise)      |N/A|   |   |   |   | Y |Frequency (0-F)
+Volume            |N/A|   | Y | Y |   | Y |Volume (0-F)
+Volume (Wave)     |N/A|   |   |   | Y |   |Volume (0, 1, 2, or 4)
 Tempo             | T | Y |   |   |   |   |Tempo (0-F, see table)
 Left Main Volume  | L | Y |   |   |   |   |Volume (0-7)
 Right Main Volume | R | Y |   |   |   |   |Volume (0-7)
@@ -78,23 +82,3 @@ C =   75 BPM
 D =  ~69 BPM
 E =  ~64 BPM
 F =   60 BPM
-
-
-* Effect OpCodes *
-
-0 0000 0000 End of Row
-1 T 0001 tttt Set Tempo
-2 L 0010 0vvv Set Left Volume
-3 R 0011 0vvv Set Right Volume
-4 P 0100 lrcc Set Pan
-5 D 0101 ddcc Set Duty Cycle 
-6   0110 ffff Set Frequency (Noise)
-7 N 0111 pppp Set Pattern (Noise)
-8 S 1000 0000 0ttt dsss Frequency Sweep (CH1)
-9 V 1001 00cc vvvv dsss Set Volume and Sweep
-A W 1010 pppp pppp pppp Set Pattern (Wave)
-B   1011 00cc llll llll Set Length
-C   1100 0fff ffff ffff Set Frequency (CH1)
-D   1101 0fff ffff ffff Set Frequency (CH2)
-E   1110 0fff ffff ffff Set Frequency (CH3)
-F   1111 00cc 0nnn nnnn Play Note

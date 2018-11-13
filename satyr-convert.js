@@ -2,6 +2,7 @@
 
 let path = require('path')
 let fs = require('fs')
+let convertProject = require('./convert.js')
 
 let args = process.argv.slice(2)
 
@@ -35,52 +36,14 @@ if (incPath)
 else
 	incPath = path.join(path.dirname(binPath), path.basename(binPath, path.extname(binPath)) + '.inc')
 
-function decodeString(buf, index, len) {
-	let s = ''
-	for (let i = index; i < index + len; i++) s += String.fromCharCode(buf[i] & 0xFF)
-	return s
-}
-
 fs.readFile(srcPath, (err, a) => {
 	if (err) throw err
 
-	let VERSION = 1
-	let MODES = { GBC: 0 }
-	let DATA_FLAGS = { EXPORT: 1 }
-
-	let bin = []
-	let inc = ''
-
-	let projectName = ""
-	let projectMode = MODES.GBC
-
-	let i = 0
-	let len = 0
-	let count = 0
-
-	// header
-	let version = a[i++]
-	if (version != VERSION) {
-		console.error('Project version not supported; expected ' + VERSION + ' but got ' + version + '. You may need a newer version of this script. Aborting')
-		process.exit(1)
+	let { error, inc, bin } = convertProject(a, path.basename(binPath))
+	if (error) {
+		console.error(error)
+		process.exit(-1)
 	}
-	len = a[i++]
-	projectName = decodeString(a, i, len)
-	i += len
-	projectMode = a[i++]
-	if (projectMode != MODES.GBC) {
-		console.error('Project mode not supported. You may need a newer version of this script. Aborting')
-		process.exit(1)
-	}
-
-	// read rest of project here
-
-	inc += ';\n'
-	inc += '; Auto-generated file; any changes will be overwritten\n'
-	inc += '; Exported from Satyr project "' + projectName + '"\n'
-	inc += ';\n'
-
-	// export rest of project here
 
 	fs.writeFile(binPath, Buffer.from(bin), err => {
 		if (err) throw err

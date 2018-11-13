@@ -1095,7 +1095,7 @@ class WaveArg extends Arg {
 	}
 	deserialize(i, a) {
 		let v = a[i++]
-		this.high = v & 0xF0 >>> 4
+		this.high = (v & 0xF0) >>> 4
 		this.low = v & 0x0F
 		return i
 	}
@@ -1265,7 +1265,7 @@ let projectNameEle = document.getElementById('project-name')
 let projectModeEle = document.getElementById('project-mode')
 let tooltipEle = document.getElementById('tooltip')
 let wavTooltipEle = document.getElementById('wav-tooltip')
-let patFlagsExportEle = document.getElementById('pat-flags-export')
+//let patFlagsExportEle = document.getElementById('pat-flags-export')
 let seqFlagsExportEle = document.getElementById('seq-flags-export')
 let wavFlagsExportEle = document.getElementById('wav-flags-export')
 let patLengthEle = document.getElementById('pat-length')
@@ -1962,7 +1962,7 @@ function doSelectPattern(index, force) {
 	if (index >= 0 && index < pats.length) {
 		pats[index].div.classList.add('selected')
 		patNameEle.value = pats[index].name
-		patFlagsExportEle.checked = (pats[index].flags & DATA_FLAGS.EXPORT) != 0
+		//patFlagsExportEle.checked = (pats[index].flags & DATA_FLAGS.EXPORT) != 0
 		patLengthEle.value = pats[index].rows.length
 	}
 	selectRow(0)
@@ -2022,7 +2022,6 @@ function selectSequence(index, force) {
 
 function doSelectSequence(index, force) {
 	if (_selectSequenceIndex == index && !force) return
-	_selectSequenceIndex = index
 	for (let ele of document.querySelectorAll('.seq.selected')) ele.classList.remove('selected')
 	if (index >= 0 && index < seqs.length) {
 		seqs[index].div.classList.add('selected')
@@ -2030,9 +2029,12 @@ function doSelectSequence(index, force) {
 		seqFlagsExportEle.checked = (seqs[index].flags & DATA_FLAGS.EXPORT) != 0
 		seqLengthEle.value = seqs[index].frames.length
 	}
-	if (seqs[_selectSequenceIndex]) for (let pat of seqs[_selectSequenceIndex].patterns) pat.hideDiv()
+	if (seqs[_selectSequenceIndex]) {
+		for (let pat of seqs[_selectSequenceIndex].patterns) pat.hideDiv()
+	}
+	_selectSequenceIndex = index
 	for (let pat of seqs[index].patterns) pat.showDiv()
-	selectPattern(0)
+	selectPattern(0, true)
 	updateSequenceGrid()
 }
 
@@ -2098,7 +2100,7 @@ function setProjectName(s) {
 function setPatternExport(b) {
 	if (b) seqs[seqI].patterns[patI].flags |= DATA_FLAGS.EXPORT
 	else seqs[seqI].patterns[patI].flags &= ~DATA_FLAGS.EXPORT
-	patFlagsExportEle.checked = (seqs[seqI].patterns[patI].flags & DATA_FLAGS.EXPORT) != 0
+	//patFlagsExportEle.checked = (seqs[seqI].patterns[patI].flags & DATA_FLAGS.EXPORT) != 0
 }
 
 function setSequenceExport(b) {
@@ -2214,7 +2216,7 @@ seqNameEle.addEventListener('input', e => setSequenceName(e.target.value))
 wavNameEle.addEventListener('input', e => setWaveName(e.target.value))
 projectNameEle.addEventListener('input', e => setProjectName(e.target.value))
 
-patFlagsExportEle.addEventListener('change', e => setPatternExport(e.target.checked))
+//patFlagsExportEle.addEventListener('change', e => setPatternExport(e.target.checked))
 seqFlagsExportEle.addEventListener('change', e => setSequenceExport(e.target.checked))
 wavFlagsExportEle.addEventListener('change', e => setWaveExport(e.target.checked))
 
@@ -2274,11 +2276,25 @@ new ContextMenu(menuFileEle).option('New Project', 'N', () => {
 	a.click()
 	a.remove()
 	URL.revokeObjectURL(objUrl)
-}).spacer().option('Download Conversion Script', '', () => {
+}).spacer().option('Export to ASM...', 'E', () => {
+	let { error, bin, inc } = convertProject(serializeProject())
+	if (error) {
+		alert(error)
+		return
+	}
+	let buf = new Uint8Array(bin)
+	let blob = new Blob([buf.buffer], { type: 'application/octet-stream' })
+	let objUrl = URL.createObjectURL(blob)
 	let a = document.createElement('a')
-	a.href = 'satyr-convert.js'
-	a.target = '_blank'
-	a.setAttribute('download', 'satyr-convert.js')
+	a.href = objUrl
+	a.setAttribute('download', projectName.replace(/\s+/g, '-') + '.bin')
+	document.body.appendChild(a)
+	a.click()
+	a.remove()
+	URL.revokeObjectURL(objUrl)
+	a = document.createElement('a')
+	a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(inc)
+	a.setAttribute('download', projectName.replace(/\s+/g, '-') + '.asm')
 	document.body.appendChild(a)
 	a.click()
 	a.remove()
