@@ -255,7 +255,7 @@ let convertProject = (function (a, binName) {
 
 	let VERSION = 1
 	let MODES = { GBC: 0 }
-	let DATA_FLAGS = { EXPORT: 1 }
+	let DATA_FLAGS = { EXPORT: 1, EXPORT2: 2, HAS_BANK: 4 }
 
 	let NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 	let ARG_TYPES = [NoteArg, VolumeArg, null, TempoArg, LeftVolumeArg, RightVolumeArg, PanArg, DutyArg, NoiseFrequencyArg, NoisePatternArg, FrequencySweepArg, VolumeSweepArg, WaveArg, FrequencyArg, WaveVolumeArg]
@@ -290,6 +290,7 @@ let convertProject = (function (a, binName) {
 		wav.name = decodeString(a, i, len)
 		i += len
 		wav.flags = a[i++]
+		if ((wav.flags & DATA_FLAGS.HAS_BANK) != 0) wav.bank = a[i++]
 		for (let k = 0; k < 32; k++) wav.samples.push(a[i++])
 		wavs.push(wav)
 	}
@@ -302,6 +303,7 @@ let convertProject = (function (a, binName) {
 		seq.name = decodeString(a, i, len)
 		i += len
 		seq.flags = a[i++]
+		if ((seq.flags & DATA_FLAGS.HAS_BANK) != 0) seq.bank = a[i++]
 		seq.loopStart = a[i++]
 		seq.loopEnd = a[i++]
 
@@ -318,6 +320,7 @@ let convertProject = (function (a, binName) {
 			pat.name = decodeString(a, i, len)
 			i += len
 			pat.flags = a[i++]
+			if ((pat.flags & DATA_FLAGS.HAS_BANK) != 0) pat.bank = a[i++]
 			let count = a[i++]
 			for (let l = 0; l < count; l++) {
 				let row = { cells: [] }
@@ -349,7 +352,7 @@ let convertProject = (function (a, binName) {
 
 	for (let wav of exportedWavs) {
 		let label = wav.name.replace(/\s/g, '')
-		inc += '\nsection "Waveform - ' + wav.name + '", romX\n'
+		inc += '\nsection "Waveform - ' + wav.name + '", romX' + ((wav.flags & DATA_FLAGS.HAS_BANK) != 0 ? ', bank[' + hex(wav.bank) + ']' : '') + '\n'
 		inc += 'WAV_' + label + ': incbin "' + binName + '", ' + hex(bin.length) + ', ' + hex(WAV_SIZE) + '\n'
 		for (let j = 0; j < 32; j += 2) {
 			bin.push((wav.samples[j + 0] << 4) | wav.samples[j + 1])
@@ -369,8 +372,9 @@ let convertProject = (function (a, binName) {
 	for (let j = 0; j < 256; j++) state[j] = 0
 
 	for (let seq of seqs) {
+		if ((seq.flags & DATA_FLAGS.EXPORT) == 0) continue
 		let label = seq.name.replace(/\s/g, '')
-		inc += '\nsection "Sequence - ' + seq.name + '", romX\n'
+		inc += '\nsection "Sequence - ' + seq.name + '", romX' + ((seq.flags & DATA_FLAGS.HAS_BANK) != 0 ? ', bank[' + hex(seq.bank) + ']' : '') + '\n'
 		inc += 'SEQ_' + label + ': incbin "' + binName + '", ' + hex(bin.length)
 		let binStart = bin.length
 		for (let frame of seq.frames) {
@@ -401,7 +405,8 @@ let convertProject = (function (a, binName) {
 					}
 					if (retrigger) bin.push(REGS[k].FREQHI, state[REGS[k].FREQHI])
 				}
-				bin.push(0xFF)
+				if (seq.frames.indexOf(frame) == seq.frames.length - 1 && j == rowCount - 1) bin.push(0x00)
+				else bin.push(0xFF)
 			}
 		}
 		inc += ', ' + hex(bin.length - binStart) + '\n'

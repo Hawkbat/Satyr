@@ -376,6 +376,7 @@ class Wave {
 		this.index = index
 		this.name = ''
 		this.flags = DATA_FLAGS.EXPORT
+		this.bank = -1
 		this.samples = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 		this.div = document.createElement('div')
 		this.div.className = 'wav'
@@ -406,6 +407,7 @@ class Sequence {
 		this.index = index
 		this.name = ''
 		this.flags = DATA_FLAGS.EXPORT
+		this.bank = -1
 		this.patterns = []
 		this.frames = []
 		this.loopStart = 0
@@ -485,6 +487,7 @@ class Pattern {
 		this.index = index
 		this.name = ''
 		this.flags = DATA_FLAGS.EXPORT
+		this.bank = -1
 		this.rows = []
 		this.div = document.createElement('div')
 		this.div.className = 'pat'
@@ -1206,7 +1209,7 @@ class ContextMenu {
 
 let VERSION = 1
 let MODES = { GBC: 0 }
-let DATA_FLAGS = { EXPORT: 1 }
+let DATA_FLAGS = { EXPORT: 1, EXPORT2: 2, HAS_BANK: 4 }
 let FOCUS = { NONE: 0, SEQUENCE: 1, PATTERN: 2, WAVE: 3 }
 
 let NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -1265,12 +1268,15 @@ let projectNameEle = document.getElementById('project-name')
 let projectModeEle = document.getElementById('project-mode')
 let tooltipEle = document.getElementById('tooltip')
 let wavTooltipEle = document.getElementById('wav-tooltip')
-//let patFlagsExportEle = document.getElementById('pat-flags-export')
+let patFlagsExportEle = document.getElementById('pat-flags-export')
 let seqFlagsExportEle = document.getElementById('seq-flags-export')
 let wavFlagsExportEle = document.getElementById('wav-flags-export')
 let patLengthEle = document.getElementById('pat-length')
 let seqLengthEle = document.getElementById('seq-length')
 let wavPresetEle = document.getElementById('wav-preset')
+let patBankEle = document.getElementById('pat-bank')
+let seqBankEle = document.getElementById('seq-bank')
+let wavBankEle = document.getElementById('wav-bank')
 let plrPlayEle = document.getElementById('plr-play')
 let plrPauseEle = document.getElementById('plr-pause')
 let plrStopEle = document.getElementById('plr-stop')
@@ -1359,12 +1365,14 @@ function serializeProject() {
 	for (let wav of wavs) {
 		len += 1 + wav.name.length
 		len += 1 // export flags
+		if ((wav.flags & DATA_FLAGS.HAS_BANK) != 0) len += 1
 		len += 32 // samples
 	}
 	len += 1 // sequence count
 	for (let seq of seqs) {
 		len += 1 + seq.name.length
 		len += 1 // export flags
+		if ((seq.flags & DATA_FLAGS.HAS_BANK) != 0) len += 1
 		len += 1 // loop start
 		len += 1 // loop end
 		len += 1 // frame count
@@ -1377,6 +1385,7 @@ function serializeProject() {
 		for (let pattern of seq.patterns) {
 			len += 1 + pattern.name.length
 			len += 1 // export flags
+			if ((pattern.flags & DATA_FLAGS.HAS_BANK) != 0) len += 1
 			len += 1 // row count
 			for (let row of pattern.rows) {
 				len += 1 // arg count
@@ -1402,12 +1411,14 @@ function serializeProject() {
 	for (let wav of wavs) {
 		i = serializeString(i, a, wav.name)
 		a[i++] = wav.flags
+		if ((wav.flags & DATA_FLAGS.HAS_BANK) != 0) a[i++] = wav.bank
 		for (let sample of wav.samples) a[i++] = sample
 	}
 	a[i++] = seqs.length
 	for (let seq of seqs) {
 		i = serializeString(i, a, seq.name)
 		a[i++] = seq.flags
+		if ((seq.flags & DATA_FLAGS.HAS_BANK) != 0) a[i++] = seq.bank
 		a[i++] = seq.loopStart
 		a[i++] = seq.loopEnd
 		a[i++] = seq.frames.length
@@ -1420,6 +1431,7 @@ function serializeProject() {
 		for (let pattern of seq.patterns) {
 			i = serializeString(i, a, pattern.name)
 			a[i++] = pattern.flags
+			if ((pattern.flags & DATA_FLAGS.HAS_BANK) != 0) a[i++] = pattern.bank
 			a[i++] = pattern.rows.length
 			for (let row of pattern.rows) {
 				let countIndex = i++
@@ -1468,6 +1480,7 @@ function deserializeProject(a) {
 		i += len
 		wav.updateLabel()
 		wav.flags = a[i++]
+		if ((wav.flags & DATA_FLAGS.HAS_BANK) != 0) wav.bank = a[i++]
 		for (let k = 0; k < 32; k++) wav.samples[k] = a[i++]
 		wavs.push(wav)
 	}
@@ -1481,6 +1494,7 @@ function deserializeProject(a) {
 		i += len
 		seq.updateLabel()
 		seq.flags = a[i++]
+		if ((seq.flags & DATA_FLAGS.HAS_BANK) != 0) seq.bank = a[i++]
 		seq.loopStart = a[i++]
 		seq.loopEnd = a[i++]
 		let count = a[i++]
@@ -1501,6 +1515,7 @@ function deserializeProject(a) {
 			i += len
 			pat.updateLabel()
 			pat.flags = a[i++]
+			if ((pat.flags & DATA_FLAGS.HAS_BANK) != 0) pat.bank = a[i++]
 			let count = a[i++]
 			for (let l = 0; l < count; l++) {
 				let row = new Row(l)
@@ -1962,7 +1977,8 @@ function doSelectPattern(index, force) {
 	if (index >= 0 && index < pats.length) {
 		pats[index].div.classList.add('selected')
 		patNameEle.value = pats[index].name
-		//patFlagsExportEle.checked = (pats[index].flags & DATA_FLAGS.EXPORT) != 0
+		patFlagsExportEle.checked = (pats[index].flags & DATA_FLAGS.EXPORT) != 0
+		patBankEle.value = (pats[index].flags & DATA_FLAGS.HAS_BANK) != 0 ? pats[index].bank : -1
 		patLengthEle.value = pats[index].rows.length
 	}
 	selectRow(0)
@@ -2027,6 +2043,7 @@ function doSelectSequence(index, force) {
 		seqs[index].div.classList.add('selected')
 		seqNameEle.value = seqs[index].name
 		seqFlagsExportEle.checked = (seqs[index].flags & DATA_FLAGS.EXPORT) != 0
+		seqBankEle.value = (seqs[index].flags & DATA_FLAGS.HAS_BANK) != 0 ? seqs[index].bank : -1
 		seqLengthEle.value = seqs[index].frames.length
 	}
 	if (seqs[_selectSequenceIndex]) {
@@ -2055,6 +2072,7 @@ function doSelectWave(index, force) {
 		wavs[index].div.classList.add('selected')
 		wavNameEle.value = wavs[index].name
 		wavFlagsExportEle.checked = (wavs[index].flags & DATA_FLAGS.EXPORT) != 0
+		wavBankEle.value = (wavs[index].flags & DATA_FLAGS.HAS_BANK) != 0 ? wavs[index].bank : -1
 	}
 	updateWaveCanvas()
 }
@@ -2100,7 +2118,7 @@ function setProjectName(s) {
 function setPatternExport(b) {
 	if (b) seqs[seqI].patterns[patI].flags |= DATA_FLAGS.EXPORT
 	else seqs[seqI].patterns[patI].flags &= ~DATA_FLAGS.EXPORT
-	//patFlagsExportEle.checked = (seqs[seqI].patterns[patI].flags & DATA_FLAGS.EXPORT) != 0
+	patFlagsExportEle.checked = (seqs[seqI].patterns[patI].flags & DATA_FLAGS.EXPORT) != 0
 }
 
 function setSequenceExport(b) {
@@ -2113,6 +2131,27 @@ function setWaveExport(b) {
 	if (b) wavs[wavI].flags |= DATA_FLAGS.EXPORT
 	else wavs[wavI].flags &= ~DATA_FLAGS.EXPORT
 	wavFlagsExportEle.checked = (wavs[wavI].flags & DATA_FLAGS.EXPORT) != 0
+}
+
+function setPatternBank(v) {
+	seqs[seqI].patterns[patI].bank = v
+	if (v >= 0) seqs[seqI].patterns[patI].flags |= DATA_FLAGS.HAS_BANK
+	else seqs[seqI].patterns[patI].flags &= ~DATA_FLAGS.HAS_BANK
+	patBankEle.value = v
+}
+
+function setSequenceBank(v) {
+	seqs[seqI].bank = v
+	if (v >= 0) seqs[seqI].flags |= DATA_FLAGS.HAS_BANK
+	else seqs[seqI].flags &= ~DATA_FLAGS.HAS_BANK
+	seqBankEle.value = v
+}
+
+function setWaveBank(v) {
+	wavs[wavI].bank = v
+	if (v >= 0) wavs[wavI].flags |= DATA_FLAGS.HAS_BANK
+	else wavs[wavI].flags &= ~DATA_FLAGS.HAS_BANK
+	wavBankEle.value = v
 }
 
 function setPatternLength(v) {
@@ -2216,9 +2255,13 @@ seqNameEle.addEventListener('input', e => setSequenceName(e.target.value))
 wavNameEle.addEventListener('input', e => setWaveName(e.target.value))
 projectNameEle.addEventListener('input', e => setProjectName(e.target.value))
 
-//patFlagsExportEle.addEventListener('change', e => setPatternExport(e.target.checked))
+patFlagsExportEle.addEventListener('change', e => setPatternExport(e.target.checked))
 seqFlagsExportEle.addEventListener('change', e => setSequenceExport(e.target.checked))
 wavFlagsExportEle.addEventListener('change', e => setWaveExport(e.target.checked))
+
+patBankEle.addEventListener('change', e => setPatternBank(e.target.value))
+seqBankEle.addEventListener('change', e => setSequenceBank(e.target.value))
+wavBankEle.addEventListener('change', e => setWaveBank(e.target.value))
 
 patLengthEle.addEventListener('change', e => setPatternLength(e.target.value))
 seqLengthEle.addEventListener('change', e => setSequenceLength(e.target.value))
