@@ -85,7 +85,7 @@ let convertProject = (function (a, binName) {
 			return i
 		}
 		toAsm() {
-			return [0xC0, this.tempo]
+			return [0xE0, this.tempo]
 		}
 	}
 
@@ -353,20 +353,20 @@ let convertProject = (function (a, binName) {
 	for (let wav of exportedWavs) {
 		let label = wav.name.replace(/\s/g, '')
 		inc += '\nsection "Waveform - ' + wav.name + '", romX' + ((wav.flags & DATA_FLAGS.HAS_BANK) != 0 ? ', bank[' + hex(wav.bank) + ']' : '') + '\n'
-		inc += 'WAV_' + label + ': incbin "' + binName + '", ' + hex(bin.length) + ', ' + hex(WAV_SIZE) + '\n'
+		inc += 'WAV_' + label + ':: incbin "' + binName + '", ' + hex(bin.length) + ', ' + hex(WAV_SIZE) + '\n'
 		for (let j = 0; j < 32; j += 2) {
 			bin.push((wav.samples[j + 0] << 4) | wav.samples[j + 1])
 		}
-		inc += 'WAV_' + label + '_END:\n'
+		inc += 'WAV_' + label + '_END::\n'
 	}
 
 	inc += '\nsection "Waveform Table", romX, align[8]\n'
-	inc += 'WAV_TABLE:\n'
+	inc += 'WAV_TABLE::\n'
 	for (let wav of exportedWavs) {
 		let label = wav.name.replace(/\s/g, '')
 		inc += '\tdw WAV_' + label + '\n'
 	}
-	inc += 'WAV_TABLE_END:\n'
+	inc += 'WAV_TABLE_END::\n'
 
 	let state = []
 	for (let j = 0; j < 256; j++) state[j] = 0
@@ -375,7 +375,7 @@ let convertProject = (function (a, binName) {
 		if ((seq.flags & DATA_FLAGS.EXPORT) == 0) continue
 		let label = seq.name.replace(/\s/g, '')
 		inc += '\nsection "Sequence - ' + seq.name + '", romX' + ((seq.flags & DATA_FLAGS.HAS_BANK) != 0 ? ', bank[' + hex(seq.bank) + ']' : '') + '\n'
-		inc += 'SEQ_' + label + ': incbin "' + binName + '", ' + hex(bin.length)
+		inc += 'SEQ_' + label + ':: incbin "' + binName + '", ' + hex(bin.length)
 		let binStart = bin.length
 		for (let frame of seq.frames) {
 			let rowCount = frame.refs.map(ref => seq.patterns[ref.value].rows.length).reduce((p, c) => Math.max(p, c), 0)
@@ -410,7 +410,7 @@ let convertProject = (function (a, binName) {
 			}
 		}
 		inc += ', ' + hex(bin.length - binStart) + '\n'
-		inc += 'SEQ_' + label + '_END:\n'
+		inc += 'SEQ_' + label + '_END::\n'
 	}
 
 	return { project: { projectName, projectMode, wavs, seqs }, bin, inc }
