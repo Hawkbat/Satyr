@@ -63,6 +63,8 @@ let convertProject = (function (a, binName) {
 				0x80 + ((f & 0xF00) >>> 8)
 			]
 		}
+		getMasks() { return [0b11111111, 0b11111111] }
+		needsRetrigger() { return true }
 	}
 
 	class VolumeArg {
@@ -72,9 +74,9 @@ let convertProject = (function (a, binName) {
 			this.volume = a[i++]
 			return i
 		}
-		toAsm() {
-			return [REGS[this.channel].VOLUME, this.volume << 4]
-		}
+		toAsm() { return [REGS[this.channel].VOLUME, this.volume << 4] }
+		getMasks() { return [0b11110000] }
+		needsRetrigger() { return true }
 	}
 
 	class TempoArg {
@@ -84,9 +86,9 @@ let convertProject = (function (a, binName) {
 			this.tempo = a[i++]
 			return i
 		}
-		toAsm() {
-			return [0xE0, this.tempo]
-		}
+		toAsm() { return [0xE0, this.tempo] }
+		getMasks() { return [0b11111111] }
+		needsRetrigger() { return false }
 	}
 
 	class LeftVolumeArg {
@@ -96,9 +98,9 @@ let convertProject = (function (a, binName) {
 			this.volume = a[i++]
 			return i
 		}
-		toAsm() {
-			return []
-		}
+		toAsm() { return [REGS[this.channel].VOLUME, this.volume << 4] }
+		getMasks() { return [0b11110000] }
+		needsRetrigger() { return false }
 	}
 
 	class RightVolumeArg {
@@ -108,9 +110,9 @@ let convertProject = (function (a, binName) {
 			this.volume = a[i++]
 			return i
 		}
-		toAsm() {
-			return []
-		}
+		toAsm() { return [REGS[this.channel].VOLUME, this.volume] }
+		getMasks() { return [0b00001111] }
+		needsRetrigger() { return false }
 	}
 
 	class PanArg {
@@ -121,9 +123,9 @@ let convertProject = (function (a, binName) {
 			this.right = (a[i++] & 0x0F) != 0
 			return i
 		}
-		toAsm() {
-			return []
-		}
+		toAsm() { return [REGS.MAIN.PAN, (this.right ? (1 << (this.channel - 1)) : 0) | (this.left ? (1 << (this.channel + 3)) : 0)] }
+		getMasks() { return [(1 << (this.channel - 1)) | (1 << (this.channel + 3))] }
+		needsRetrigger() { return false }
 	}
 
 	class WaveVolumeArg {
@@ -133,9 +135,9 @@ let convertProject = (function (a, binName) {
 			this.volume = a[i++]
 			return i
 		}
-		toAsm() {
-			return [REGS[this.channel].VOLUME, this.volume << 5]
-		}
+		toAsm() { return [REGS[this.channel].VOLUME, this.volume << 5] }
+		getMasks() { return [0b01100000] }
+		needsRetrigger() { return true }
 	}
 
 	class DutyArg {
@@ -145,9 +147,9 @@ let convertProject = (function (a, binName) {
 			this.duty = a[i++]
 			return i
 		}
-		toAsm() {
-			return [REGS[this.channel].LENGTH, this.duty << 6]
-		}
+		toAsm() { return [REGS[this.channel].LENGTH, this.duty << 6] }
+		getMasks() { return [0b11000000] }
+		needsRetrigger() { return false }
 	}
 
 	class NoiseFrequencyArg {
@@ -158,8 +160,15 @@ let convertProject = (function (a, binName) {
 			return i
 		}
 		toAsm() {
-			return []
+			return [
+				REGS[this.channel].FREQLO,
+				this.noise << 4,
+				REGS[this.channel].FREQHI,
+				0x80
+			]
 		}
+		getMasks() { return [0b11110000, 0b11111111] }
+		needsRetrigger() { return true }
 	}
 
 	class NoisePatternArg {
@@ -169,9 +178,9 @@ let convertProject = (function (a, binName) {
 			this.pattern = a[i++]
 			return i
 		}
-		toAsm() {
-			return []
-		}
+		toAsm() { return [REGS[this.channel].FREQLO, this.pattern] }
+		getMasks() { return [0b00001111] }
+		needsRetrigger() { return false }
 	}
 
 	class FrequencySweepArg {
@@ -184,9 +193,9 @@ let convertProject = (function (a, binName) {
 			this.step = v & 0b00000111
 			return i
 		}
-		toAsm() {
-			return []
-		}
+		toAsm() { return [REGS[this.channel].SWEEP, (this.time << 4) | (this.dir ? 0b00001000 : 0) | this.step] }
+		getMasks() { return [0b01111111] }
+		needsRetrigger() { return true }
 	}
 
 	class VolumeSweepArg {
@@ -198,9 +207,9 @@ let convertProject = (function (a, binName) {
 			this.sweep = v & 0b0111
 			return i
 		}
-		toAsm() {
-			return []
-		}
+		toAsm() { return [REGS[this.channel].VOLUME, (this.dir ? 0b00001000 : 0) | this.sweep] }
+		getMasks() { return [0b00001111] }
+		needsRetrigger() { return true }
 	}
 
 	class WaveArg {
@@ -221,6 +230,8 @@ let convertProject = (function (a, binName) {
 			}
 			return b
 		}
+		getMasks() { return [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF] }
+		needsRetrigger() { return false }
 	}
 
 	class FrequencyArg {
@@ -234,8 +245,15 @@ let convertProject = (function (a, binName) {
 			return i
 		}
 		toAsm() {
-			return []
+			return [
+				REGS[this.channel].FREQLO,
+				(this.mid << 4) | this.low,
+				REGS[this.channel].FREQHI,
+				0x80 + this.high
+			]
 		}
+		getMasks() { return [0b11111111, 0b11111111] }
+		needsRetrigger() { return true }
 	}
 
 	function frequencyToGB(v) { return Math.min(2047, Math.max(0, Math.round(2048 * (v - 64) / v))) }
@@ -370,6 +388,8 @@ let convertProject = (function (a, binName) {
 
 	let state = []
 	for (let j = 0; j < 256; j++) state[j] = 0
+	state[REGS.MAIN.VOLUME] = 0x77
+	state[REGS.MAIN.PAN] = 0xFF
 
 	for (let seq of seqs) {
 		if ((seq.flags & DATA_FLAGS.EXPORT) == 0) continue
@@ -387,13 +407,14 @@ let convertProject = (function (a, binName) {
 					let retrigger = false
 					for (let arg of args) {
 						let asm = arg.toAsm()
-						if (arg instanceof NoteArg) retrigger = true
-						if (arg instanceof VolumeArg) retrigger = true
-						if (arg instanceof WaveVolumeArg) retrigger = true
+						let masks = arg.getMasks()
+						if (arg.needsRetrigger()) retrigger = true
 						for (let l = 0; l < asm.length; l += 2) {
 							let dst = asm[l + 0]
 							let val = asm[l + 1]
-							if (arg instanceof NoteArg && l >= 2) {
+							let mask = masks[l / 2]
+							val = (val & mask) | (state[dst] & ~mask)
+							if ((arg instanceof NoteArg || arg instanceof NoiseFrequencyArg || arg instanceof FrequencyArg) && l >= 2) {
 								// we can't retrigger a note without clobbering the frequency and thus silencing the channel,
 								// so we delay triggering the note until after the effects of all args are processed
 							} else {
